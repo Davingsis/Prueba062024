@@ -1,0 +1,38 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.9.19'
+        addToPath: true
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: |
+        python -m unittest discover -s tests
+      displayName: 'Run unit tests'
+
+    - script: |
+        docker build -t prueba:v1 .
+      displayName: 'Build Docker image'
+
+    - script: |
+        docker save prueba:v1 | gzip > $(Build.ArtifactStagingDirectory)/docker-image.tar.gz
+      displayName: 'Save Docker image as artifact'
+
+    - publish: $(Build.ArtifactStagingDirectory)/docker-image.tar.gz
+      artifact: drop
